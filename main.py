@@ -2,6 +2,9 @@ import streamlit as st
 import pandas as pd
 from docxtpl import DocxTemplate
 import os
+import shutil
+from zipfile import ZipFile
+import base64
 
 def generate_reports(csv_file, template_file, reports_dir):
     # Load template
@@ -10,7 +13,7 @@ def generate_reports(csv_file, template_file, reports_dir):
     # Read CSV file
     data = pd.read_csv(csv_file)
 
-    # Create a directory for saving reports on the user's desktop if it doesn't exist
+    # Create a directory for saving reports
     os.makedirs(reports_dir, exist_ok=True)
 
     # Iterate through each row in the CSV
@@ -33,14 +36,23 @@ def main():
         # Define the path to the template file
         template_file = "template.docx"
 
-        # Get the path to the user's desktop
-        desktop_path = os.path.join(os.path.expanduser('~'), 'Desktop')
-        reports_dir = os.path.join(desktop_path, 'reports')
+        # Define the directory for saving reports
+        reports_dir = "reports"
 
         # Generate reports
         generate_reports(csv_file, template_file, reports_dir)
         st.success("Reports generated successfully!")
-        st.write(f"Check the 'reports' directory on your desktop for the generated files")
+
+        # Zip the reports directory
+        zip_file_path = "reports.zip"
+        with ZipFile(zip_file_path, 'w') as zipf:
+            for root, dirs, files in os.walk(reports_dir):
+                for file in files:
+                    zipf.write(os.path.join(root, file), os.path.relpath(os.path.join(root, file), reports_dir))
+
+        # Provide download link for the zip file
+        st.write("Download the zip file containing the reports:")
+        st.markdown(f"[Download Reports](data:application/zip;base64,{base64.b64encode(open(zip_file_path, 'rb').read()).decode()})")
 
 if __name__ == "__main__":
     main()
